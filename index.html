@@ -2,9 +2,35 @@
 <html>
 <body>
 
-<h2>My Security Camera</h2>
+<h2>📷 Security Camera</h2>
 
-<p>Website is working ✅</p>
+<video id="video" width="300" autoplay></video>
+<br><br>
+<button onclick="send()">🚨 Send Alert</button>
+
+<script>
+const video = document.getElementById('video');
+
+// Camera ON
+navigator.mediaDevices.getUserMedia({ video: true })
+.then(stream => {
+  video.srcObject = stream;
+});
+
+// Capture + Send
+function send() {
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+
+  const image = canvas.toDataURL();
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    alert("Location: " + pos.coords.latitude + "," + pos.coords.longitude);
+  });
+}
+</script>
 
 </body>
 </html>
