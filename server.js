@@ -1,74 +1,35 @@
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-body { margin:0; background:black; }
-video { width:100vw; height:100vh; object-fit:cover; }
-</style>
+const express = require("express");
+const nodemailer = require("nodemailer");
 
-<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
-</head>
+const app = express();
+app.use(express.json({ limit: "10mb" }));
 
-<body>
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "md5857099@gmail.com",
+    pass: process.env.EMAIL_PASS
+  }
+});
 
-<video id="video" autoplay muted playsinline></video>
+app.post("/", async (req, res) => {
+  const { image, location } = req.body;
 
-<script>
-const video = document.getElementById("video");
+  const base64Data = image.replace(/^data:image\/png;base64,/, "");
 
-navigator.mediaDevices.getUserMedia({ video: true })
-.then(stream => video.srcObject = stream);
-
-let lastAlertTime = 0;
-
-async function loadModel() {
-  await faceapi.nets.tinyFaceDetector.loadFromUri(
-    "https://cdn.jsdelivr.net/npm/face-api.js/models"
-  );
-}
-
-async function start() {
-  await loadModel();
-
-  setInterval(async () => {
-    const result = await faceapi.detectAllFaces(
-      video,
-      new faceapi.TinyFaceDetectorOptions()
-    );
-
-    if (result.length === 0) {
-      const now = Date.now();
-
-      if (now - lastAlertTime > 10000) {
-        sendAlert();
-        lastAlertTime = now;
-      }
-    }
-  }, 3000);
-}
-
-function sendAlert() {
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
-
-  const image = canvas.toDataURL();
-
-  navigator.geolocation.getCurrentPosition(pos => {
-    fetch("https://ai-alert-system-5v1v.onrender.com", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        image: image,
-        location: pos.coords.latitude + "," + pos.coords.longitude
-      })
-    });
+  await transporter.sendMail({
+    from: "md5857099@gmail.com",
+    to: "mahammadnurullah@gmail.com",
+    subject: "🚨 Alert",
+    text: "Location: " + location,
+    attachments: [{
+      filename: "photo.png",
+      content: base64Data,
+      encoding: "base64"
+    }]
   });
-}
 
-start();
-</script>
+  res.send("ok");
+});
 
-</body>
-</html>
+app.listen(3000);
