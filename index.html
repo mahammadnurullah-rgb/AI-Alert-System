@@ -1,33 +1,46 @@
 <!DOCTYPE html>
 <html>
+<head>
+<style>
+body {
+  margin: 0;
+  background: black;
+}
+
+video {
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
+button {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px;
+  background: red;
+  color: white;
+  border: none;
+}
+</style>
+</head>
+
 <body>
 
-<h2>📷 Security Camera</h2>
-
-<video id="video" autoplay style="width: 100%; height: auto;"></video>
-<br><br>
+<video id="video" autoplay></video>
 <button onclick="send()">🚨 Send Alert</button>
 
 <script>
 const video = document.getElementById('video');
 
-// Camera ON
 navigator.mediaDevices.getUserMedia({ video: true })
 .then(stream => {
   video.srcObject = stream;
 });
 
-// Capture + Send
 function send() {
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
-
-  const image = canvas.toDataURL();
-
   navigator.geolocation.getCurrentPosition(pos => {
-    alert("Location: " + pos.coords.latitude + "," + pos.coords.longitude);
+    alert("📍 Location: " + pos.coords.latitude + "," + pos.coords.longitude);
   });
 }
 </script>
