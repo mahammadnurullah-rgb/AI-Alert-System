@@ -2,21 +2,11 @@
 <html>
 <head>
 <style>
-body {
-  margin: 0;
-  background: black;
-}
-
-#video {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  background: black;
-}
+body { margin:0; background:black; }
+video { width:100vw; height:100vh; object-fit:cover; }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 </head>
 
 <body>
@@ -26,28 +16,58 @@ body {
 <script>
 const video = document.getElementById("video");
 
-async function startCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }, // back camera
-      audio: false
-    });
+navigator.mediaDevices.getUserMedia({ video: true })
+.then(stream => video.srcObject = stream);
 
-    video.srcObject = stream;
+let lastAlertTime = 0;
 
-    // IMPORTANT: force play
-    video.onloadedmetadata = () => {
-      video.play();
-      console.log("Video playing ✅");
-    };
-
-  } catch (err) {
-    alert("Camera error: " + err.message);
-    console.log(err);
-  }
+async function loadModel() {
+  await faceapi.nets.tinyFaceDetector.loadFromUri(
+    "https://cdn.jsdelivr.net/npm/face-api.js/models"
+  );
 }
 
-startCamera();
+async function start() {
+  await loadModel();
+
+  setInterval(async () => {
+    const result = await faceapi.detectAllFaces(
+      video,
+      new faceapi.TinyFaceDetectorOptions()
+    );
+
+    if (result.length === 0) {
+      const now = Date.now();
+
+      if (now - lastAlertTime > 10000) {
+        sendAlert();
+        lastAlertTime = now;
+      }
+    }
+  }, 3000);
+}
+
+function sendAlert() {
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+
+  const image = canvas.toDataURL();
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    fetch("https://ai-alert-system-5v1v.onrender.com", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        image: image,
+        location: pos.coords.latitude + "," + pos.coords.longitude
+      })
+    });
+  });
+}
+
+start();
 </script>
 
 </body>
