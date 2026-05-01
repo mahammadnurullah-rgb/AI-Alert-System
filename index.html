@@ -16,30 +16,42 @@ video { width:100vw; height:100vh; object-fit:cover; }
 <script>
 const video = document.getElementById("video");
 
+// Camera start
 navigator.mediaDevices.getUserMedia({ video: true })
-.then(stream => video.srcObject = stream);
+.then(stream => {
+  video.srcObject = stream;
+  console.log("Camera started");
+});
 
 let lastAlertTime = 0;
 
+// Load AI model
 async function loadModel() {
   await faceapi.nets.tinyFaceDetector.loadFromUri(
     "https://cdn.jsdelivr.net/npm/face-api.js/models"
   );
+  console.log("Model loaded");
 }
 
+// Start detection
 async function start() {
   await loadModel();
 
   setInterval(async () => {
+    if (!video.videoWidth) return;
+
     const result = await faceapi.detectAllFaces(
       video,
       new faceapi.TinyFaceDetectorOptions()
     );
 
+    console.log("Faces detected:", result.length);
+
     if (result.length === 0) {
       const now = Date.now();
 
       if (now - lastAlertTime > 10000) {
+        console.log("Suspicious activity detected");
         sendAlert();
         lastAlertTime = now;
       }
@@ -47,27 +59,55 @@ async function start() {
   }, 3000);
 }
 
+// UPDATED sendAlert (fixed)
 function sendAlert() {
+  console.log("Sending request...");
+
+  if (!video.videoWidth) {
+    console.log("Video not ready");
+    return;
+  }
+
   const canvas = document.createElement("canvas");
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
 
-  const image = canvas.toDataURL();
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0);
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    fetch("https://ai-alert-system-5v1v.onrender.com", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        image: image,
-        location: pos.coords.latitude + "," + pos.coords.longitude
+  const image = canvas.toDataURL("image/png");
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      fetch("https://ai-alert-system-5v1v.onrender.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          image: image,
+          location: pos.coords.latitude + "," + pos.coords.longitude
+        })
       })
-    });
-  });
+      .then(res => res.text())
+      .then(data => console.log("Server response:", data))
+      .catch(err => console.log("Fetch error:", err));
+    },
+    (err) => {
+      console.log("Location error:", err);
+    }
+  );
 }
 
+// Start system
 start();
+
+// 🔥 FORCE TEST (important)
+setTimeout(() => {
+  console.log("Force test running...");
+  sendAlert();
+}, 5000);
+
 </script>
 
 </body>
