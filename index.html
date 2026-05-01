@@ -1,21 +1,53 @@
 <!DOCTYPE html>
 <html>
-<body style="margin:0; background:black;">
+<head>
+<style>
+body {
+  margin: 0;
+  background: black;
+}
 
-<video id="video" autoplay playsinline style="width:100vw;height:100vh;"></video>
+#video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  background: black;
+}
+</style>
+</head>
+
+<body>
+
+<video id="video" autoplay muted playsinline></video>
 
 <script>
-const video = document.getElementById('video');
+const video = document.getElementById("video");
 
-navigator.mediaDevices.getUserMedia({ video: true })
-.then(stream => {
-  video.srcObject = stream;
-  console.log("Camera started ✅");
-})
-.catch(err => {
-  alert("Camera error: " + err);
-  console.log(err);
-});
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }, // back camera
+      audio: false
+    });
+
+    video.srcObject = stream;
+
+    // IMPORTANT: force play
+    video.onloadedmetadata = () => {
+      video.play();
+      console.log("Video playing ✅");
+    };
+
+  } catch (err) {
+    alert("Camera error: " + err.message);
+    console.log(err);
+  }
+}
+
+startCamera();
 </script>
 
 </body>
