@@ -1,11 +1,74 @@
-const express = require("express");
-const app = express();
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { margin:0; background:black; }
+video { width:100vw; height:100vh; object-fit:cover; }
+</style>
 
-app.use(express.json());
+<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+</head>
 
-app.post("/", (req, res) => {
-  console.log("Alert received:", req.body);
-  res.send("ok");
-});
+<body>
 
-app.listen(3000);
+<video id="video" autoplay muted playsinline></video>
+
+<script>
+const video = document.getElementById("video");
+
+navigator.mediaDevices.getUserMedia({ video: true })
+.then(stream => video.srcObject = stream);
+
+let lastAlertTime = 0;
+
+async function loadModel() {
+  await faceapi.nets.tinyFaceDetector.loadFromUri(
+    "https://cdn.jsdelivr.net/npm/face-api.js/models"
+  );
+}
+
+async function start() {
+  await loadModel();
+
+  setInterval(async () => {
+    const result = await faceapi.detectAllFaces(
+      video,
+      new faceapi.TinyFaceDetectorOptions()
+    );
+
+    if (result.length === 0) {
+      const now = Date.now();
+
+      if (now - lastAlertTime > 10000) {
+        sendAlert();
+        lastAlertTime = now;
+      }
+    }
+  }, 3000);
+}
+
+function sendAlert() {
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+
+  const image = canvas.toDataURL();
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    fetch("https://ai-alert-system-5v1v.onrender.com", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        image: image,
+        location: pos.coords.latitude + "," + pos.coords.longitude
+      })
+    });
+  });
+}
+
+start();
+</script>
+
+</body>
+</html>
