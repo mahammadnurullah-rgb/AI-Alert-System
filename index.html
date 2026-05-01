@@ -1,43 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body {
+  margin: 0;
+  background: black;
+}
+video {
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+</head>
+
+<body>
+
+<video id="video" autoplay muted playsinline></video>
 
 <script>
 const video = document.getElementById('video');
 
+// ✅ Camera start
 navigator.mediaDevices.getUserMedia({ video: true })
 .then(stream => {
   video.srcObject = stream;
+})
+.catch(err => {
+  alert("Camera error: " + err);
 });
 
 let lastAlertTime = 0;
 
+// ✅ Load AI model
 async function loadModel() {
   await faceapi.nets.tinyFaceDetector.loadFromUri(
     "https://cdn.jsdelivr.net/npm/face-api.js/models"
   );
 }
 
+// ✅ Start detection
 async function start() {
   await loadModel();
 
   setInterval(async () => {
-    const result = await faceapi.detectAllFaces(
-      video,
-      new faceapi.TinyFaceDetectorOptions()
-    );
+    if (video.readyState === 4) {
 
-    // ❗ Face not detected = suspicious
-    if (result.length === 0) {
-      const now = Date.now();
+      const result = await faceapi.detectAllFaces(
+        video,
+        new faceapi.TinyFaceDetectorOptions()
+      );
 
-      // Spam रोकने के लिए (10 sec gap)
-      if (now - lastAlertTime > 10000) {
-        sendAlert();
-        lastAlertTime = now;
+      if (result.length === 0) {
+        const now = Date.now();
+
+        if (now - lastAlertTime > 10000) {
+          sendAlert();
+          lastAlertTime = now;
+        }
       }
     }
   }, 3000);
 }
 
+// ✅ Send alert
 function sendAlert() {
   const canvas = document.createElement("canvas");
   canvas.width = video.videoWidth;
@@ -47,7 +74,6 @@ function sendAlert() {
   const image = canvas.toDataURL();
 
   navigator.geolocation.getCurrentPosition(pos => {
-    
     fetch("https://ai-alert-system-5v1v.onrender.com", {
       method: "POST",
       headers: {
@@ -59,9 +85,12 @@ function sendAlert() {
       })
     });
 
-    console.log("🚨 Suspicious Activity Detected");
+    console.log("🚨 Alert Sent");
   });
 }
 
 start();
 </script>
+
+</body>
+</html>
