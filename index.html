@@ -1,9 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Alert System</title>
+
 <style>
-body { margin:0; background:black; }
-video { width:100vw; height:100vh; object-fit:cover; }
+body { margin:0; background:black; overflow:hidden; }
+video {
+  width:100vw;
+  height:100vh;
+  object-fit:cover;
+}
+#status {
+  position:fixed;
+  top:10px;
+  left:10px;
+  color:#00ff00;
+  font-family:monospace;
+  background:rgba(0,0,0,0.5);
+  padding:6px 10px;
+  border-radius:6px;
+}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
@@ -11,16 +28,21 @@ video { width:100vw; height:100vh; object-fit:cover; }
 
 <body>
 
+<div id="status">Starting...</div>
 <video id="video" autoplay muted playsinline></video>
 
 <script>
 const video = document.getElementById("video");
+const statusText = document.getElementById("status");
 
 // Camera start
 navigator.mediaDevices.getUserMedia({ video: true })
 .then(stream => {
   video.srcObject = stream;
-  console.log("Camera started");
+  statusText.innerText = "Camera ON";
+})
+.catch(err => {
+  statusText.innerText = "Camera Error";
 });
 
 let lastAlertTime = 0;
@@ -30,7 +52,7 @@ async function loadModel() {
   await faceapi.nets.tinyFaceDetector.loadFromUri(
     "https://cdn.jsdelivr.net/npm/face-api.js/models"
   );
-  console.log("Model loaded");
+  statusText.innerText = "AI Ready";
 }
 
 // Start detection
@@ -45,28 +67,23 @@ async function start() {
       new faceapi.TinyFaceDetectorOptions()
     );
 
-    console.log("Faces detected:", result.length);
-
     if (result.length === 0) {
       const now = Date.now();
 
       if (now - lastAlertTime > 10000) {
-        console.log("Suspicious activity detected");
+        statusText.innerText = "🚨 No Face!";
         sendAlert();
         lastAlertTime = now;
       }
+    } else {
+      statusText.innerText = "Face Detected ✅";
     }
   }, 3000);
 }
 
-// UPDATED sendAlert (fixed)
+// Send alert
 function sendAlert() {
-  console.log("Sending request...");
-
-  if (!video.videoWidth) {
-    console.log("Video not ready");
-    return;
-  }
+  if (!video.videoWidth) return;
 
   const canvas = document.createElement("canvas");
   canvas.width = video.videoWidth;
@@ -79,7 +96,7 @@ function sendAlert() {
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      fetch("https://ai-alert-system-5v1v.onrender.com", {
+      fetch("https://ai-alert-system-production.up.railway.app/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -88,13 +105,7 @@ function sendAlert() {
           image: image,
           location: pos.coords.latitude + "," + pos.coords.longitude
         })
-      })
-      .then(res => res.text())
-      .then(data => console.log("Server response:", data))
-      .catch(err => console.log("Fetch error:", err));
-    },
-    (err) => {
-      console.log("Location error:", err);
+      });
     }
   );
 }
@@ -102,9 +113,9 @@ function sendAlert() {
 // Start system
 start();
 
-// 🔥 FORCE TEST (important)
+// Auto test after 5 sec
 setTimeout(() => {
-  console.log("Force test running...");
+  statusText.innerText = "⚡ Testing...";
   sendAlert();
 }, 5000);
 
